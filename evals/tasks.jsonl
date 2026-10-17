@@ -1,0 +1,10 @@
+{"id": 1, "task": "How many .md files are in the docs folder?", "expected": "3", "min_tools": 1}
+{"id": 2, "task": "What version number is set in config.json?", "expected": "1.4.2", "min_tools": 1}
+{"id": 3, "task": "How many people are listed in data/team.csv? Don't count the header row.", "expected": "5", "min_tools": 1}
+{"id": 4, "task": "Which team member in data/team.csv is based in Berlin?", "expected": "Lena", "min_tools": 1}
+{"id": 5, "task": "What is the first item on the list in notes/todo.txt?", "expected": "renew the domain", "min_tools": 1}
+{"id": 6, "task": "According to the FAQ in the docs folder, what is the default port?", "expected": "8080", "min_tools": 2}
+{"id": 7, "task": "Which file in the docs folder says which Python version is required? Give the file name.", "expected": "setup.md", "min_tools": 3}
+{"id": 8, "task": "What is the latest version listed in the changelog inside docs?", "expected": "1.4.2", "min_tools": 2}
+{"id": 9, "task": "config.json names a readme file. Find it, then count how many files (not folders) are in the same folder as that readme.", "expected": "4", "min_tools": 3}
+{"id": 10, "task": "Fetch https://example.com and tell me the main heading on the page.", "expected": "Example Domain", "min_tools": 1}

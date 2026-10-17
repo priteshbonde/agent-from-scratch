@@ -1,0 +1,4 @@
+1.4.2  - fixed log rotation
+1.4.1  - faster startup
+1.4.0  - added ORBIT_PORT setting
+1.3.0  - first public release
