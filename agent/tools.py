@@ -89,8 +89,37 @@ TOOLS: list[dict[str, Any]] = [
             "required": ["path"],
         },
     },
-    # TODO(week1-step2): schema for list_dir   (path is optional, default ".")
-    # TODO(week1-step2): schema for fetch_url  (url is required)
+    {
+        "name": "list_dir",
+        "description": (
+            "List the contents of a directory in the workspace. "
+            "Paths are relative to the workspace root, e.g. 'docs'. "
+            "Omit path or use '.' to list the workspace root. "
+            "Returns one entry per line, sorted; folders end with '/'."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Directory path relative to the workspace root."}
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "fetch_url",
+         "description": (
+            "Fetch a web page over HTTP or HTTPS and return the raw response body "
+            "(HTML for web pages). Other URL schemes are rejected. "
+            "Long pages are truncated."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "The URL to fetch."}
+            },
+            "required": ["url"],
+        },
+    },
 ]
 
 REGISTRY: dict[str, Callable[..., str]] = {
