@@ -50,31 +50,48 @@ def run_agent(
     logger=None,                                    # agent.log.RunLogger or None
     max_steps: int = MAX_STEPS,
 ) -> AgentResult:
-    """Run one task to completion.
+    """Run one task to completion."""
 
-    TODO(week1-step3). The recipe:
-
-    1. messages = [{"role": "user", "content": task}]
-    2. Repeat up to max_steps times:
-       a. response = llm.create(system=SYSTEM_PROMPT, messages=messages, tools=tools)
-          Add response.input_tokens / output_tokens to running totals.
-       b. Append the model's reply FIRST:
-              {"role": "assistant", "content": response.content}
-          (Beginner bug #1: forgetting this. The API then rejects your tool results.)
-       c. If response.stop_reason != "tool_use": you're done.
-          Return AgentResult(answer=response.text(), steps=..., tokens..., messages=messages)
-       d. For EACH block in response.tool_uses():
-              try:  output = run_tool(block["name"], block["input"]); is_error = False
-              except Exception as e:  output = f"{type(e).__name__}: {e}"; is_error = True
-          Build a result:
-              {"type": "tool_result", "tool_use_id": block["id"],
-               "content": output, "is_error": is_error}
-          (Beginner bug #2: a tool_use_id that doesn't match block["id"].)
-          (Beginner bug #3: letting the exception crash the loop. Send it back;
-           the model often fixes its own mistake.)
-       e. Append ONE user message holding ALL the results from this turn:
-              {"role": "user", "content": [result1, result2, ...]}
-       f. If logger: logger.log(...) what happened this step (see agent/log.py).
-    3. Out of steps: raise TooManySteps(f"No answer after {max_steps} steps")
-    """
-    raise NotImplementedError("Week 1, Step 3: write the loop. Read the docstring above.")
+    messages = [{"role": "user", "content": task}]
+    input_tokens = 0
+    output_tokens = 0
+    for step in range(1, max_steps + 1):
+        response = llm.create(system=SYSTEM_PROMPT, messages=messages, tools=tools)
+        input_tokens += response.input_tokens
+        output_tokens += response.output_tokens
+        if logger:
+            logger.log("model_call", step=step, stop_reason=response.stop_reason, input_tokens=response.input_tokens, output_tokens=response.output_tokens)
+        messages.append({"role": "assistant", "content": response.content})
+        
+        if response.stop_reason != "tool_use":
+            if logger:
+                logger.log("final", step=step, answer=response.text())
+            return AgentResult(
+                answer=response.text(),
+                steps=step,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                messages=messages
+            )
+        
+        tool_results = []
+        for block in response.tool_uses():
+            try:
+                output = run_tool(block["name"], block["input"])
+                is_error = False
+            except Exception as e:
+                output = f"{type(e).__name__}: {e}"
+                is_error = True
+            
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": block["id"],
+                "content": output,
+                "is_error": is_error
+            })
+            if logger:
+                logger.log("tool_call", step=step, name=block["name"], input=block["input"], is_error=is_error, output_preview=output[:200])
+        
+        messages.append({"role": "user", "content": tool_results})
+        
+    raise TooManySteps(f"No answer after {max_steps} steps")
