@@ -82,3 +82,8 @@ def test_schema_shape(schema):
     assert schema["description"].strip()
     assert schema["input_schema"]["type"] == "object"
     assert "properties" in schema["input_schema"]
+
+
+def test_list_dir_empty_folder(ws):
+    (ws / "empty").mkdir()
+    assert list_dir("empty") == "(empty folder)"

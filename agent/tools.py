@@ -18,6 +18,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlparse
+
+import httpx
 
 WORKSPACE = Path(__file__).resolve().parent.parent / "workspace"
 MAX_OUTPUT_CHARS = 5000   # big outputs blow up the context window (Week 2 problem)
@@ -35,39 +38,55 @@ def truncate(text: str, limit: int = MAX_OUTPUT_CHARS) -> str:
 
 
 def safe_path(rel: str, root: Path | None = None) -> Path:
-    """Turn a path from the model into a real path that is guaranteed to be inside root.
-
-    TODO(week1-step4):
-      - root defaults to WORKSPACE (read the global at call time, so tests can swap it)
-      - resolve (root / rel) to an absolute path; .resolve() also follows symlinks
-      - if the result is not root itself or inside root, raise ToolError
-        hint: Path.is_relative_to()
-      - "../README.md", "/etc/passwd" and "docs/../../x" must all be rejected
-    """
-    raise NotImplementedError("Week 1, Step 4: write safe_path")
+    """Turn a path from the model into a real path that is guaranteed to be inside root."""
+    if root is None:
+        root = WORKSPACE
+    root = root.resolve()
+    target = (root / rel).resolve()
+    if not target.is_relative_to(root):
+        raise ToolError(f"Path '{rel}' is outside the workspace")
+    return target
 
 
 def list_dir(path: str = ".") -> str:
-    """TODO(week1-step4): one entry per line, sorted, folders end with "/".
-    Use safe_path. Raise ToolError if the folder doesn't exist.
+    """List a workspace folder: one entry per line, sorted, folders end with '/'.
+
+    Raises ToolError if the path is outside the workspace or is not a folder.
     """
-    raise NotImplementedError("Week 1, Step 4: write list_dir")
+    p = safe_path(path)
+    if not p.is_dir():
+        raise ToolError(f"Path '{path}' is not a directory")
+
+    names = [entry.name + ("/" if entry.is_dir() else "") for entry in p.iterdir()]
+    return "\n".join(sorted(names)) or "(empty folder)"
 
 
 def read_file(path: str) -> str:
-    """TODO(week1-step4): return the file's text, passed through truncate().
-    Use safe_path. Raise ToolError if it's missing or is a folder.
+    """Return a workspace file's text, truncated to MAX_OUTPUT_CHARS.
+
+    Raises ToolError if the path is outside the workspace or is not a file.
     """
-    raise NotImplementedError("Week 1, Step 4: write read_file")
+    p = safe_path(path)
+    if not p.is_file():
+        raise ToolError(f"Path '{path}' is not a file")
+    text = p.read_text(encoding="utf-8", errors="replace")
+    return truncate(text)
 
 
 def fetch_url(url: str) -> str:
-    """TODO(week1-step4): GET the page with httpx, return its text, truncated.
-      - only http:// and https:// (reject file://, ftp://... with ToolError)
-      - timeout=FETCH_TIMEOUT_SECONDS, follow_redirects=True
-      - a non-2xx status becomes a ToolError the model can read
+    """Fetch an http(s) URL and return the response body, truncated.
+
+    Raises ToolError for other URL schemes, network errors, or a non-2xx status.
     """
-    raise NotImplementedError("Week 1, Step 4: write fetch_url")
+    if urlparse(url).scheme not in ("http", "https"):
+        raise ToolError(f"URL '{url}' has unsupported scheme (only http:// and https:// allowed)")
+    try:
+        resp = httpx.get(url, timeout=FETCH_TIMEOUT_SECONDS, follow_redirects=True)
+    except httpx.HTTPError as e:
+        raise ToolError(f"Could not fetch '{url}': {e}") from e
+    if not resp.is_success:
+        raise ToolError(f"Fetching '{url}' failed with HTTP {resp.status_code}")
+    return truncate(resp.text)
 
 
 # --- schemas: what the model sees -------------------------------------------
