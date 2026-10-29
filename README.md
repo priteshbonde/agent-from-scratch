@@ -67,7 +67,9 @@ step 3  answer: "Python 3.12 or newer is in setup.md"
 
 ## What I learned
 
-- Used `yield`, which turns a function into generator, So even safety checks run late.
-- The tools descriptions is used by model to understand working of the tool.
-- tool results go back as a user message, all of them in one message
-- why safe_path uses is_relative_to and not startswith
+- `yield` anywhere turns a function into a generator, so none of its code runs until it's looped over, including the safety checks. A tool must `return` its result.
+- The model never sees the tool's code, only its description. Stating the defaults and the output format changes which tool it picks and how it reads the result.
+- All tool results from one turn go back in a single `user` message. The real model made 4 parallel reads in one turn, and that rule is what made them work.
+- A `startswith` path check is a security bug: `workspace_secrets` starts with `workspace`. `is_relative_to` compares whole path parts.
+- 10/10 is a weak signal: the grader only checks that the expected text appears, and no task makes a tool fail.
+- A passing test suite missed two bugs (an empty folder returning `None` and a 404 returned as content). Each bug now has a test.
